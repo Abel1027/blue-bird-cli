@@ -30,7 +30,7 @@ class Dart {
     );
   }
 
-    /// Apply all fixes (`dart fix --apply`).
+  /// Apply all fixes (`dart fix --apply`).
   static Future<void> applyFixes({
     required Logger logger,
     String cwd = '.',
@@ -45,7 +45,7 @@ class Dart {
     );
   }
 
-    /// Format (`dart format .`).
+  /// Format (`dart format .`).
   static Future<void> format({
     required Logger logger,
     String cwd = '.',

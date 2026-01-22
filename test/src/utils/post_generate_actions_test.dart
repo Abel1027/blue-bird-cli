@@ -109,7 +109,7 @@ workspace:
         final parentDir = Directory(p.join(tempDir.path, 'parent'))
           ..createSync();
         File(p.join(parentDir.path, 'pubspec.yaml'))
-          .writeAsStringSync('name: parent_project\n');
+            .writeAsStringSync('name: parent_project\n');
 
         final packageDir = Directory(p.join(parentDir.path, 'test_package'))
           ..createSync();
@@ -126,17 +126,15 @@ workspace:
         () async {
           final parentDir = Directory(p.join(tempDir.path, 'parent_no_ws'))
             ..createSync();
-          File(p.join(parentDir.path, 'pubspec.yaml'))
-              .writeAsStringSync('''
+          File(p.join(parentDir.path, 'pubspec.yaml')).writeAsStringSync('''
 name: parent_project
 dependencies:
   flutter:
     sdk: flutter
 ''');
 
-          final packageDir =
-              Directory(p.join(parentDir.path, 'test_package'))
-                ..createSync();
+          final packageDir = Directory(p.join(parentDir.path, 'test_package'))
+            ..createSync();
 
           await expectLater(
             addToParentWorkspace(logger, packageDir),
@@ -207,8 +205,7 @@ dependencies:
       test('throws when no dependencies section', () async {
         final parentDir = Directory(p.join(tempDir.path, 'parent'))
           ..createSync();
-        File(p.join(parentDir.path, 'pubspec.yaml'))
-          .writeAsStringSync('''
+        File(p.join(parentDir.path, 'pubspec.yaml')).writeAsStringSync('''
 name: parent_project
 workspace:
   - test_package
