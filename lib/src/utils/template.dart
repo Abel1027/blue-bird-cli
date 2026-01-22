@@ -29,5 +29,6 @@ abstract class Template {
     Logger logger,
     Directory outputDir,
     BlueBirdMasonGenerator blueBirdMasonGenerator,
+    Map<String, dynamic>? vars,
   );
 }

@@ -13,7 +13,7 @@ const description = 'Blue Bird CLI.';
 /// {@template blue_bird_cli_command_runner}
 /// A [CommandRunner] for the CLI.
 ///
-/// ```
+/// ```sh
 /// $ blue_bird --version
 /// ```
 /// {@endtemplate}
@@ -136,6 +136,6 @@ ${lightYellow.wrap('Update available!')} ${lightCyan.wrap(packageVersion)} \u219
 Run ${lightCyan.wrap('$executableName update')} to update''',
           );
       }
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 }

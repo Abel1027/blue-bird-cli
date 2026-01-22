@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:args/command_runner.dart';
 import 'package:blue_bird_cli/src/command_runner.dart';
 import 'package:blue_bird_cli/src/version.dart';
@@ -6,16 +8,15 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
 
-import 'commands/update_command_test.dart';
-
 class MockLogger extends Mock implements Logger {}
 
 class MockPubUpdater extends Mock implements PubUpdater {}
 
+class MockProgress extends Mock implements Progress {}
+
 const latestVersion = '0.0.0';
 
-final updatePrompt =
-    '''
+final updatePrompt = '''
 ${lightYellow.wrap('Update available!')} ${lightCyan.wrap(packageVersion)} \u2192 ${lightCyan.wrap(latestVersion)}
 Run ${lightCyan.wrap('$executableName update')} to update''';
 
@@ -56,7 +57,7 @@ void main() {
       ).thenAnswer((_) async => latestVersion);
       when(
         () => pubUpdater.update(packageName: packageName),
-      ).thenAnswer((_) => Future.value(FakeProcessResult()));
+      ).thenAnswer((_) => Future.value(ProcessResult(0, 0, '', '')));
       when(
         () => pubUpdater.isUpToDate(
           packageName: any(named: 'packageName'),
@@ -66,8 +67,8 @@ void main() {
 
       final progress = MockProgress();
       final progressLogs = <String>[];
-      when(() => progress.complete(any())).thenAnswer((_) {
-        final message = _.positionalArguments.elementAt(0) as String?;
+      when(() => progress.complete(any())).thenAnswer((answer) {
+        final message = answer.positionalArguments.elementAt(0) as String?;
         if (message != null) progressLogs.add(message);
       });
       when(() => logger.progress(any())).thenReturn(progress);
@@ -149,6 +150,17 @@ void main() {
         verify(() => logger.detail('    - template: flutter_package'))
             .called(1);
       });
+    });
+
+    test('handles exceptions during update check', () async {
+      when(
+        () => pubUpdater.getLatestVersion(any()),
+      ).thenThrow(Exception('Network error'));
+
+      final result = await commandRunner.run(['--version']);
+      expect(result, equals(ExitCode.success.code));
+      verify(() => logger.info(packageVersion)).called(1);
+      // Should not crash even if update check fails
     });
   });
 }

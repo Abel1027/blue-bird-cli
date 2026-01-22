@@ -8,8 +8,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';
 import 'package:test/test.dart';
 
-class FakeProcessResult extends Fake implements ProcessResult {}
-
 class MockLogger extends Mock implements Logger {}
 
 class MockProgress extends Mock implements Progress {}
@@ -37,8 +35,8 @@ void main() {
       when(
         () => pubUpdater.getLatestVersion(any()),
       ).thenAnswer((_) async => packageVersion);
-      when(() => progress.complete(any())).thenAnswer((_) {
-        final message = _.positionalArguments.elementAt(0) as String?;
+      when(() => progress.complete(any())).thenAnswer((answer) {
+        final message = answer.positionalArguments.elementAt(0) as String?;
         if (message != null) progressLogs.add(message);
       });
       when(() => logger.progress(any())).thenReturn(progress);
@@ -98,7 +96,7 @@ void main() {
         ).thenAnswer((_) async => latestVersion);
         when(
           () => pubUpdater.update(packageName: packageName),
-        ).thenAnswer((_) => Future.value(FakeProcessResult()));
+        ).thenAnswer((_) => Future.value(ProcessResult(0, 0, '', '')));
         when(() => logger.progress(any())).thenReturn(MockProgress());
         final result = await commandRunner.run(['update']);
         expect(result, equals(ExitCode.success.code));

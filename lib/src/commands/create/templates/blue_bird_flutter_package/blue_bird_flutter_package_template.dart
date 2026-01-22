@@ -20,9 +20,26 @@ class FlutterPackageTemplate extends Template {
     Logger logger,
     Directory outputDir,
     BlueBirdMasonGenerator blueBirdMasonGenerator,
+    Map<String, dynamic>? vars,
   ) async {
+    try {
+      await addToParentWorkspace(logger, outputDir);
+      await addToParentDependencies(logger, outputDir);
+    } on NoParentWorkspaceException catch (e) {
+      logger.err(e.toString());
+      return;
+    }
+
+    try {
+      await addToParentDIConfiguration(logger, outputDir);
+    } on NoParentInjectionException catch (e) {
+      logger.warn(e.toString());
+    }
+
     await installFlutterPackages(logger, outputDir);
+    await generate(logger, outputDir);
     await applyDartFixes(logger, outputDir);
+    await format(logger, outputDir);
     _logSummary(logger);
   }
 

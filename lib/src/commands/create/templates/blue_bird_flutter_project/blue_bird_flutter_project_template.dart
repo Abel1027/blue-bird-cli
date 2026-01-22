@@ -1,4 +1,6 @@
 import 'package:blue_bird_cli/src/commands/create/templates/templates.dart';
+import 'package:blue_bird_cli/src/utils/constant.dart';
+import 'package:blue_bird_cli/src/utils/project_config.dart';
 import 'package:blue_bird_cli/src/utils/utils.dart';
 import 'package:mason/mason.dart';
 import 'package:path/path.dart' as path;
@@ -21,12 +23,25 @@ class FlutterProjectTemplate extends Template {
     Logger logger,
     Directory outputDir,
     BlueBirdMasonGenerator blueBirdMasonGenerator,
+    Map<String, dynamic>? vars,
   ) async {
-    await _createExamplePackage(blueBirdMasonGenerator, outputDir);
     await installFlutterPackages(logger, outputDir, recursive: true);
-    final l10nPath = path.join(outputDir.path, 'core', 'internationalization');
-    await generateL10n(logger, Directory(l10nPath));
+    await _createExamplePackage(logger, blueBirdMasonGenerator, outputDir);
+    await generate(logger, outputDir);
     await applyDartFixes(logger, outputDir);
+    await format(logger, outputDir, recursive: true);
+    final projectConfig = ProjectConfig.fromMap(vars ?? {});
+    await create(
+      logger,
+      outputDir,
+      organization: projectConfig.orgName,
+      android: projectConfig.platforms.android,
+      ios: projectConfig.platforms.ios,
+      web: projectConfig.platforms.web,
+      linux: projectConfig.platforms.linux,
+      macos: projectConfig.platforms.macos,
+      windows: projectConfig.platforms.windows,
+    );
     _logSummary(logger);
   }
 
@@ -40,18 +55,30 @@ class FlutterProjectTemplate extends Template {
   }
 
   Future<void> _createExamplePackage(
+    Logger logger,
     BlueBirdMasonGenerator blueBirdMasonGenerator,
     Directory projectDir,
   ) async {
     final template = FlutterPackageTemplate();
-    final vars = {'project_name': 'feat_example', 'in_project': 'true'};
-    final directory = Directory(path.join(projectDir.path, 'features'));
+    const projectName = 'bb_package_example';
+    final vars = {
+      'project_name': projectName,
+      'project_description': Constant.projectDescription,
+    };
+    final directory = Directory(path.join(projectDir.path, 'packages'));
     final target = DirectoryGeneratorTarget(directory);
 
     await blueBirdMasonGenerator.generate(
       template: template,
       vars: vars,
       target: target,
+    );
+
+    await template.onGenerateComplete(
+      logger,
+      Directory(path.join(target.dir.path, projectName)),
+      blueBirdMasonGenerator,
+      null,
     );
   }
 }

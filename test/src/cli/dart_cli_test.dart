@@ -17,15 +17,12 @@ class _TestProcess {
 
 class _MockProcess extends Mock implements _TestProcess {}
 
-class _MockProcessResult extends Mock implements ProcessResult {}
-
 class _MockLogger extends Mock implements Logger {}
 
 class _MockProgress extends Mock implements Progress {}
 
 void main() {
   group('Dart', () {
-    late ProcessResult processResult;
     late _TestProcess process;
     late Logger logger;
     late Progress progress;
@@ -35,9 +32,7 @@ void main() {
       progress = _MockProgress();
       when(() => logger.progress(any())).thenReturn(progress);
 
-      processResult = _MockProcessResult();
       process = _MockProcess();
-      when(() => processResult.exitCode).thenReturn(ExitCode.success.code);
       when(
         () => process.run(
           any(),
@@ -45,7 +40,9 @@ void main() {
           runInShell: any(named: 'runInShell'),
           workingDirectory: any(named: 'workingDirectory'),
         ),
-      ).thenAnswer((_) async => processResult);
+      ).thenAnswer(
+        (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+      );
     });
 
     group('.installed', () {
@@ -57,7 +54,16 @@ void main() {
       });
 
       test('returns false when dart is not installed', () {
-        when(() => processResult.exitCode).thenReturn(ExitCode.software.code);
+        when(
+          () => process.run(
+            any(),
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
         ProcessOverrides.runZoned(
           () =>
               expectLater(Dart.installed(logger: logger), completion(isFalse)),
@@ -70,7 +76,6 @@ void main() {
       test('completes normally', () {
         ProcessOverrides.runZoned(
           () => expectLater(Dart.applyFixes(logger: logger), completes),
-          runProcess: null,
         );
       });
 
@@ -79,6 +84,120 @@ void main() {
           () => expectLater(
             Dart.applyFixes(logger: logger, recursive: true),
             completes,
+          ),
+          runProcess: process.run,
+        );
+      });
+    });
+
+    group('.generate', () {
+      test('completes normally', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(Dart.generate(logger: logger), completes),
+          runProcess: process.run,
+        );
+      });
+
+      test('completes normally using recursion', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.generate(logger: logger, recursive: true),
+            completes,
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('throws PubspecNotFound when no pubspec exists', () {
+        final tempDir = Directory.systemTemp.createTempSync();
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.generate(logger: logger, cwd: tempDir.path),
+            throwsA(isA<PubspecNotFound>()),
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('throws PubspecNotFound when recursive and no pubspec exists', () {
+        final tempDir = Directory.systemTemp.createTempSync();
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.generate(logger: logger, cwd: tempDir.path, recursive: true),
+            throwsA(isA<PubspecNotFound>()),
+          ),
+          runProcess: process.run,
+        );
+      });
+    });
+
+    group('.format', () {
+      test('completes normally', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(Dart.format(logger: logger), completes),
+          runProcess: process.run,
+        );
+      });
+
+      test('completes normally using recursion', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.format(logger: logger, recursive: true),
+            completes,
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('throws PubspecNotFound when no pubspec exists', () {
+        final tempDir = Directory.systemTemp.createTempSync();
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.format(logger: logger, cwd: tempDir.path),
+            throwsA(isA<PubspecNotFound>()),
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('throws PubspecNotFound when recursive and no pubspec exists', () {
+        final tempDir = Directory.systemTemp.createTempSync();
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.format(logger: logger, cwd: tempDir.path, recursive: true),
+            throwsA(isA<PubspecNotFound>()),
+          ),
+          runProcess: process.run,
+        );
+      });
+    });
+
+    group('.activate', () {
+      test('returns true when activation succeeds', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.activate(logger: logger, package: 'mason_cli'),
+            completion(isTrue),
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('returns false when activation fails', () {
+        when(
+          () => process.run(
+            any(),
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Dart.activate(logger: logger, package: 'invalid_package'),
+            completion(isFalse),
           ),
           runProcess: process.run,
         );
