@@ -8,7 +8,7 @@
 Blue Bird CLI generates production-ready Flutter projects with clean architecture, workspace management, and automated dependency injection. Choose from lite templates for small apps or complex multi-package architectures for enterprise-scale applications.
 
 <p align="center">
-<img src="https://github.com/Abel1027/blue_bird_cli/raw/main/blue_bird_cli.png" alt="Blue Bird CLI" height="200"/>
+<img src="https://github.com/Abel1027/blue_bird_cli/raw/main/blue_bird_cli.png" alt="Blue Bird CLI" height="400"/>
 </p>
 
 _Inspired by [Very Good CLI][very_good_cli_link] 🤖_
