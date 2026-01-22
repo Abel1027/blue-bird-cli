@@ -17,8 +17,8 @@ class BlueBirdMasonGenerator {
 
   Future<void> generate({
     required Template template,
-    Map<String, dynamic> vars = const {},
     required DirectoryGeneratorTarget target,
+    Map<String, dynamic> vars = const {},
   }) async {
     var args = vars;
 
@@ -43,8 +43,8 @@ class BlueBirdMasonGenerator {
         '''Building generator from brick: ${brick.name} ${brick.location.version}''',
       );
       return await _generatorFromBrick(brick);
-    } catch (_) {
-      _logger.detail('Building generator from brick failed: $_');
+    } on Exception catch (error) {
+      _logger.detail('Building generator from brick failed: $error');
     }
     _logger.detail(
       '''Building generator from bundle ${template.bundle.name} ${template.bundle.version}''',

@@ -71,9 +71,9 @@ class _Cmd {
   static Future<ProcessResult> run(
     String cmd,
     List<String> args, {
+    required Logger logger,
     bool throwOnError = true,
     String? workingDirectory,
-    required Logger logger,
   }) async {
     logger.detail('Running: $cmd with $args');
     final runProcess = ProcessOverrides.current?.runProcess ?? Process.run;
@@ -109,7 +109,7 @@ class _Cmd {
     if (pr.exitCode != 0) {
       final values = {
         'Standard out': pr.stdout.toString().trim(),
-        'Standard error': pr.stderr.toString().trim()
+        'Standard error': pr.stderr.toString().trim(),
       }..removeWhere((k, v) => v.isEmpty);
 
       var message = 'Unknown error';

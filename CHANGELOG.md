@@ -1,3 +1,12 @@
+# 1.0.0
+
+Major release with workspace automation and improved architecture.
+
+**Templates:**
+- Flutter Lite: streamlined single-app with clean architecture
+- Flutter Project: multi-package workspace for enterprise apps
+- Flutter Package: auto-integrated feature packages with DI setup
+
 # 0.1.4
 
 Update flutter project.

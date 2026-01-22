@@ -16,16 +16,16 @@ class Flutter {
     try {
       await _Cmd.run('flutter', ['--version'], logger: logger);
       return true;
-    } catch (_) {
+    } on Exception catch (_) {
       return false;
     }
   }
 
   /// Install flutter dependencies (`flutter packages get`).
   static Future<void> packagesGet({
+    required Logger logger,
     String cwd = '.',
     bool recursive = false,
-    required Logger logger,
   }) async {
     await _runCommand(
       cmd: (cwd) async {
@@ -58,9 +58,9 @@ class Flutter {
 
   /// Install dart dependencies (`flutter pub get`).
   static Future<void> pubGet({
+    required Logger logger,
     String cwd = '.',
     bool recursive = false,
-    required Logger logger,
   }) async {
     await _runCommand(
       cmd: (cwd) => _Cmd.run(
@@ -76,9 +76,9 @@ class Flutter {
 
   /// Generate l10n files (`flutter gen-l10n`).
   static Future<void> l10nGen({
+    required Logger logger,
     String cwd = '.',
     bool recursive = false,
-    required Logger logger,
   }) async {
     await _runCommand(
       cmd: (cwd) => _Cmd.run(
@@ -89,6 +89,42 @@ class Flutter {
       ),
       cwd: cwd,
       recursive: recursive,
+    );
+  }
+
+  /// Set up organization and platforms for a Flutter project.
+  /// (`flutter create . --org <organization> --platforms=<platforms>`).
+  static Future<void> create({
+    required Logger logger,
+    required String organization,
+    required bool android,
+    required bool ios,
+    required bool web,
+    required bool linux,
+    required bool macos,
+    required bool windows,
+    String cwd = '.',
+  }) async {
+    final platforms = [
+      if (android) 'android',
+      if (ios) 'ios',
+      if (web) 'web',
+      if (linux) 'linux',
+      if (macos) 'macos',
+      if (windows) 'windows',
+    ];
+
+    if (platforms.isEmpty) {
+      return;
+    }
+
+    final platformsString = platforms.join(',');
+
+    await _Cmd.run(
+      'flutter',
+      ['create', '.', '--org', organization, '--platforms=$platformsString'],
+      workingDirectory: cwd,
+      logger: logger,
     );
   }
 }
@@ -112,7 +148,7 @@ Future<void> _verifyGitDependencies(
   final gitDependencies = [
     ...dependencies.entries,
     ...devDependencies.entries,
-    ...dependencyOverrides.entries
+    ...dependencyOverrides.entries,
   ]
       .where((entry) => entry.value is GitDependency)
       .map((entry) => entry.value)

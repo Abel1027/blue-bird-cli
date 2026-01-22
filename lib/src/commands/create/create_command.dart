@@ -3,19 +3,20 @@ import 'dart:async';
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:blue_bird_cli/src/commands/create/templates/templates.dart';
+import 'package:blue_bird_cli/src/utils/constant.dart';
 import 'package:blue_bird_cli/src/utils/utils.dart';
 import 'package:mason/mason.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:universal_io/io.dart';
 
-const _defaultOrgName = 'com.example.bluebird';
-const _defaultAppId = '$_defaultOrgName.appid';
-const _defaultDescription = 'Blue Bird CLI.';
+const _defaultOrgName = Constant.organization;
+const _defaultDescription = Constant.projectDescription;
 
 final _templates = [
   FlutterProjectTemplate(),
   FlutterPackageTemplate(),
+  FlutterLiteTemplate(),
 ];
 
 final _defaultTemplate = _templates.first;
@@ -54,12 +55,6 @@ class CreateCommand extends Command<int> {
         defaultsTo: _defaultDescription,
       )
       ..addOption(
-        'org-name',
-        help: 'The organization for this new project.',
-        defaultsTo: _defaultOrgName,
-        aliases: ['org'],
-      )
-      ..addOption(
         'template',
         abbr: 't',
         help: 'The template used to generate this new project.',
@@ -72,6 +67,12 @@ class CreateCommand extends Command<int> {
             element.name: element.help,
           },
         ),
+      )
+      ..addOption(
+        'org-name',
+        help: 'The organization for this new project.',
+        defaultsTo: _defaultOrgName,
+        aliases: ['org'],
       )
       ..addOption(
         'android',
@@ -102,17 +103,6 @@ class CreateCommand extends Command<int> {
         'windows',
         help: 'The plugin supports the Windows platform.',
         defaultsTo: 'true',
-      )
-      ..addOption(
-        'application-id',
-        help: 'The bundle identifier on iOS or application id on Android.',
-        defaultsTo: _defaultAppId,
-      )
-      ..addOption(
-        'in-project',
-        help: 'Include the new project within an existing one with all '
-            'dependencies imported',
-        defaultsTo: 'false',
       );
   }
 
@@ -124,7 +114,7 @@ class CreateCommand extends Command<int> {
 
   @override
   String get description =>
-      'Creates a new blue bird project in the specified directory.';
+      'Creates a new Blue Bird project in the specified directory.';
 
   @override
   String get summary => '$invocation\n$description';
@@ -147,18 +137,13 @@ class CreateCommand extends Command<int> {
     final template = _template;
     final android = _argResults['android'] as String? ?? 'true';
     final ios = _argResults['ios'] as String? ?? 'true';
-    final applicationId = _applicationId;
-    final inProject = _argResults['in-project'] as String? ?? 'false';
+    final web = _argResults['web'] as String? ?? 'true';
+    final linux = _argResults['linux'] as String? ?? 'true';
+    final macos = _argResults['macos'] as String? ?? 'true';
+    final windows = _argResults['windows'] as String? ?? 'true';
     final vars = <String, dynamic>{
       'project_name': projectName,
-      'description': description,
-      'org_name': orgName,
-      'application_id': applicationId,
-      'platforms': <String>[
-        if (android.toBool()) 'android',
-        if (ios.toBool()) 'ios',
-      ],
-      'in_project': inProject.toBool(),
+      'project_description': description,
     };
     final target = DirectoryGeneratorTarget(outputDirectory);
 
@@ -172,6 +157,17 @@ class CreateCommand extends Command<int> {
       _logger,
       Directory(path.join(target.dir.path, projectName)),
       _blueBirdMasonGenerator,
+      {
+        'org_name': orgName,
+        'platforms': {
+          'android': android.toBool(),
+          'ios': ios.toBool(),
+          'web': web.toBool(),
+          'linux': linux.toBool(),
+          'macos': macos.toBool(),
+          'windows': windows.toBool(),
+        },
+      },
     );
 
     return ExitCode.success.code;
@@ -194,13 +190,6 @@ class CreateCommand extends Command<int> {
     final orgName = _argResults['org-name'] as String? ?? _defaultOrgName;
     _validateOrgName(orgName);
     return orgName;
-  }
-
-  /// Gets the application id.
-  String get _applicationId {
-    final appId = _argResults['application-id'] as String? ?? _defaultAppId;
-    _validateOrgName(appId);
-    return appId;
   }
 
   Template get _template {
@@ -259,7 +248,7 @@ class CreateCommand extends Command<int> {
 
   Directory get _outputDirectory {
     final directory = _argResults['output-directory'] as String? ?? '.';
-    return Directory(directory);
+    return Directory(directory).absolute;
   }
 }
 

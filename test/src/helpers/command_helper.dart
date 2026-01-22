@@ -32,8 +32,7 @@ void Function() withRunner(
     Logger logger,
     PubUpdater pubUpdater,
     List<String> printLogs,
-  )
-      runnerFn,
+  ) runnerFn,
 ) {
   return _overridePrint((printLogs) async {
     final logger = MockLogger();
@@ -45,8 +44,8 @@ void Function() withRunner(
       pubUpdater: pubUpdater,
     );
 
-    when(() => progress.complete(any())).thenAnswer((_) {
-      final message = _.positionalArguments.elementAt(0) as String?;
+    when(() => progress.complete(any())).thenAnswer((answer) {
+      final message = answer.positionalArguments.elementAt(0) as String?;
       if (message != null) progressLogs.add(message);
     });
     when(() => logger.progress(any())).thenReturn(progress);
@@ -56,6 +55,9 @@ void Function() withRunner(
         currentVersion: any(named: 'currentVersion'),
       ),
     ).thenAnswer((_) => Future.value(true));
+    when(
+      () => pubUpdater.getLatestVersion(any()),
+    ).thenAnswer((_) => Future.value('1.0.0'));
 
     await runnerFn(commandRunner, logger, pubUpdater, printLogs);
   });

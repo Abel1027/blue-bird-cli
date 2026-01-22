@@ -1,5 +1,3 @@
-// ignore_for_file: no_adjacent_strings_in_list
-
 import 'dart:async';
 
 import 'package:blue_bird_cli/src/cli/cli.dart';
@@ -40,8 +38,6 @@ class _TestProcess {
 
 class _MockProcess extends Mock implements _TestProcess {}
 
-class _MockProcessResult extends Mock implements ProcessResult {}
-
 class _MockLogger extends Mock implements Logger {}
 
 class _MockProgress extends Mock implements Progress {}
@@ -50,7 +46,6 @@ class _FakeGeneratorTarget extends Fake implements GeneratorTarget {}
 
 void main() {
   group('Flutter', () {
-    late ProcessResult processResult;
     late _TestProcess process;
     late Logger logger;
     late Progress progress;
@@ -65,9 +60,7 @@ void main() {
       progress = _MockProgress();
       when(() => logger.progress(any())).thenReturn(progress);
 
-      processResult = _MockProcessResult();
       process = _MockProcess();
-      when(() => processResult.exitCode).thenReturn(ExitCode.success.code);
       when(
         () => process.run(
           any(),
@@ -75,7 +68,49 @@ void main() {
           runInShell: any(named: 'runInShell'),
           workingDirectory: any(named: 'workingDirectory'),
         ),
-      ).thenAnswer((_) async => processResult);
+      ).thenAnswer(
+        (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+      );
+    });
+
+    group('.installed', () {
+      test('returns true when flutter is installed', () async {
+        when(
+          () => process.run(
+            'flutter',
+            ['--version'],
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+        );
+
+        final result = await ProcessOverrides.runZoned(
+          () => Flutter.installed(logger: logger),
+          runProcess: process.run,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('returns false when flutter is not installed', () async {
+        when(
+          () => process.run(
+            'flutter',
+            ['--version'],
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenThrow(Exception('flutter not found'));
+
+        final result = await ProcessOverrides.runZoned(
+          () => Flutter.installed(logger: logger),
+          runProcess: process.run,
+        );
+
+        expect(result, isFalse);
+      });
     });
 
     group('.packagesGet', () {
@@ -90,10 +125,6 @@ void main() {
       });
 
       test('throws when process fails', () {
-        final flutterProcessResult = _MockProcessResult();
-        when(
-          () => flutterProcessResult.exitCode,
-        ).thenReturn(ExitCode.software.code);
         when(
           () => process.run(
             'flutter',
@@ -101,7 +132,9 @@ void main() {
             runInShell: any(named: 'runInShell'),
             workingDirectory: any(named: 'workingDirectory'),
           ),
-        ).thenAnswer((_) async => flutterProcessResult);
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
 
         ProcessOverrides.runZoned(
           () => expectLater(
@@ -117,10 +150,6 @@ void main() {
         File(p.join(directory.path, 'pubspec.yaml'))
             .writeAsStringSync(_unreachableGitUrlPubspec);
 
-        final gitProcessResult = _MockProcessResult();
-        when(
-          () => gitProcessResult.exitCode,
-        ).thenReturn(ExitCode.software.code);
         when(
           () => process.run(
             'git',
@@ -128,7 +157,9 @@ void main() {
             runInShell: any(named: 'runInShell'),
             workingDirectory: any(named: 'workingDirectory'),
           ),
-        ).thenAnswer((_) async => gitProcessResult);
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
 
         ProcessOverrides.runZoned(
           () => expectLater(
@@ -193,10 +224,6 @@ void main() {
       });
 
       test('throws when process fails', () {
-        final flutterProcessResult = _MockProcessResult();
-        when(
-          () => flutterProcessResult.exitCode,
-        ).thenReturn(ExitCode.software.code);
         when(
           () => process.run(
             'flutter',
@@ -204,7 +231,9 @@ void main() {
             runInShell: any(named: 'runInShell'),
             workingDirectory: any(named: 'workingDirectory'),
           ),
-        ).thenAnswer((_) async => flutterProcessResult);
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
         ProcessOverrides.runZoned(
           () => expectLater(
             Flutter.pubGet(cwd: Directory.systemTemp.path, logger: logger),
@@ -232,7 +261,16 @@ void main() {
       });
 
       test('throws when process fails', () {
-        when(() => processResult.exitCode).thenReturn(ExitCode.software.code);
+        when(
+          () => process.run(
+            any(),
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
         ProcessOverrides.runZoned(
           () => expectLater(Flutter.pubGet(logger: logger), throwsException),
           runProcess: process.run,
@@ -240,10 +278,254 @@ void main() {
       });
 
       test('throws when process fails (recursive)', () {
-        when(() => processResult.exitCode).thenReturn(ExitCode.software.code);
+        when(
+          () => process.run(
+            any(),
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
         ProcessOverrides.runZoned(
           () => expectLater(
             Flutter.pubGet(recursive: true, logger: logger),
+            throwsException,
+          ),
+          runProcess: process.run,
+        );
+      });
+    });
+
+    group('.l10nGen', () {
+      test('throws when there is no pubspec.yaml', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Flutter.l10nGen(cwd: Directory.systemTemp.path, logger: logger),
+            throwsA(isA<PubspecNotFound>()),
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('throws when process fails', () {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', ''),
+        );
+
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Flutter.l10nGen(cwd: Directory.systemTemp.path, logger: logger),
+            throwsException,
+          ),
+          runProcess: process.run,
+        );
+      });
+
+      test('completes when the process succeeds', () {
+        ProcessOverrides.runZoned(
+          () => expectLater(Flutter.l10nGen(logger: logger), completes),
+          runProcess: process.run,
+        );
+      });
+    });
+
+    group('.create', () {
+      test('runs flutter create with org and platforms', () async {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+        );
+
+        await ProcessOverrides.runZoned(
+          () => Flutter.create(
+            organization: 'com.example',
+            android: true,
+            ios: true,
+            web: false,
+            linux: false,
+            macos: false,
+            windows: false,
+            logger: logger,
+          ),
+          runProcess: process.run,
+        );
+
+        verify(
+          () => process.run(
+            'flutter',
+            [
+              'create',
+              '.',
+              '--org',
+              'com.example',
+              '--platforms=android,ios',
+            ],
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).called(1);
+      });
+
+      test('creates with all platforms enabled', () async {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+        );
+
+        await ProcessOverrides.runZoned(
+          () => Flutter.create(
+            organization: 'com.example',
+            android: true,
+            ios: true,
+            web: true,
+            linux: true,
+            macos: true,
+            windows: true,
+            logger: logger,
+          ),
+          runProcess: process.run,
+        );
+
+        verify(
+          () => process.run(
+            'flutter',
+            [
+              'create',
+              '.',
+              '--org',
+              'com.example',
+              '--platforms=android,ios,web,linux,macos,windows',
+            ],
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).called(1);
+      });
+
+      test('creates with only web platform', () async {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+        );
+
+        await ProcessOverrides.runZoned(
+          () => Flutter.create(
+            organization: 'com.example',
+            android: false,
+            ios: false,
+            web: true,
+            linux: false,
+            macos: false,
+            windows: false,
+            logger: logger,
+          ),
+          runProcess: process.run,
+        );
+
+        verify(
+          () => process.run(
+            'flutter',
+            [
+              'create',
+              '.',
+              '--org',
+              'com.example',
+              '--platforms=web',
+            ],
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).called(1);
+      });
+
+      test('creates with custom working directory', () async {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.success.code, '', ''),
+        );
+
+        await ProcessOverrides.runZoned(
+          () => Flutter.create(
+            organization: 'com.example',
+            android: true,
+            ios: false,
+            web: false,
+            linux: false,
+            macos: false,
+            windows: false,
+            cwd: '/custom/path',
+            logger: logger,
+          ),
+          runProcess: process.run,
+        );
+
+        verify(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: '/custom/path',
+          ),
+        ).called(1);
+      });
+
+      test('throws when process fails', () {
+        when(
+          () => process.run(
+            'flutter',
+            any(),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        ).thenAnswer(
+          (_) async => ProcessResult(0, ExitCode.software.code, '', 'Error'),
+        );
+
+        ProcessOverrides.runZoned(
+          () => expectLater(
+            Flutter.create(
+              organization: 'com.example',
+              android: true,
+              ios: false,
+              web: false,
+              linux: false,
+              macos: false,
+              windows: false,
+              logger: logger,
+            ),
             throwsException,
           ),
           runProcess: process.run,
