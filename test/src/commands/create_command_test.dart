@@ -35,6 +35,9 @@ class MockGeneratorHooks extends Mock implements GeneratorHooks {}
 
 class MockTemplate extends Mock implements Template {}
 
+class MockBlueBirdMasonGenerator extends Mock
+    implements BlueBirdMasonGenerator {}
+
 class _TestProcess {
   Future<ProcessResult> run(
     String executable,
@@ -620,6 +623,66 @@ void configureDependencies() {
       expect('False'.toBool(), isFalse);
       expect('anything'.toBool(), isFalse);
     });
+
+    test(
+      'falls back to default template when template arg is null',
+      () async {
+        final argResults = MockArgResults();
+        final blueBirdMasonGenerator = MockBlueBirdMasonGenerator();
+        final tempDir = Directory.systemTemp.createTempSync();
+
+        try {
+          when(() => argResults['output-directory'] as String?)
+              .thenReturn(tempDir.path);
+          when(() => argResults['desc'] as String?)
+              .thenReturn('Test description');
+          when(() => argResults['org-name'] as String?)
+              .thenReturn('com.example.test');
+
+          // Force CreateCommand._template to use the `orElse` branch.
+          when(() => argResults['template'] as String?).thenReturn(null);
+
+          when(() => argResults['android'] as String?).thenReturn('true');
+          when(() => argResults['ios'] as String?).thenReturn('true');
+          when(() => argResults['web'] as String?).thenReturn('false');
+          when(() => argResults['linux'] as String?).thenReturn('false');
+          when(() => argResults['macos'] as String?).thenReturn('false');
+          when(() => argResults['windows'] as String?).thenReturn('false');
+          when(() => argResults.rest).thenReturn(['test_project']);
+
+          when(
+            () => blueBirdMasonGenerator.generate(
+              template: any(named: 'template'),
+              vars: any(named: 'vars'),
+              target: any(named: 'target'),
+            ),
+          ).thenThrow(Exception('stop-after-template-selection'));
+
+          final command = CreateCommand(
+            logger: logger,
+            blueBirdMasonGenerator: blueBirdMasonGenerator,
+          )..argResultOverrides = argResults;
+
+          await expectLater(
+            command.run,
+            throwsA(isA<Exception>()),
+          );
+
+          final captured = verify(
+            () => blueBirdMasonGenerator.generate(
+              template: captureAny(named: 'template'),
+              vars: any(named: 'vars'),
+              target: any(named: 'target'),
+            ),
+          ).captured;
+
+          expect(captured, hasLength(1));
+          expect((captured.single as Template).name, 'flutter_project');
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test(
       'run completes successfully with flutter_lite template',
