@@ -143,6 +143,27 @@ dependencies:
           verify(() => progress.fail()).called(greaterThanOrEqualTo(1));
         },
       );
+
+      test(
+        'throws when workspace is detected but cannot be parsed '
+        '(CR-only newlines)',
+        () async {
+          final parentDir = Directory(p.join(tempDir.path, 'parent_cr'))
+            ..createSync();
+          File(p.join(parentDir.path, 'pubspec.yaml')).writeAsStringSync(
+            'name: parent_project\rworkspace:\r  - core\r',
+          );
+
+          final packageDir = Directory(p.join(parentDir.path, 'test_package'))
+            ..createSync();
+
+          await expectLater(
+            addToParentWorkspace(logger, packageDir),
+            throwsA(isA<NoParentWorkspaceException>()),
+          );
+          verify(() => progress.fail()).called(greaterThanOrEqualTo(1));
+        },
+      );
     });
 
     group('addToParentDependencies', () {
@@ -286,6 +307,42 @@ dependencies:
             lines.indexWhere((line) => line.trim() == 'dependencies:');
         expect(testPackageLineIndex, greaterThan(depsIndex));
       });
+
+      test(
+        'detects path dependencies and inserts after them',
+        () async {
+          final parentDir = Directory(p.join(tempDir.path, 'parent_path_deps'))
+            ..createSync();
+          final parentPubspec = File(p.join(parentDir.path, 'pubspec.yaml'))
+            ..writeAsStringSync('''
+name: parent_project
+workspace:
+  - core
+dependencies:
+  existing_package: # keep this line from looking like a section header
+    path: ../existing
+  flutter:
+    sdk: flutter
+''');
+
+          final packageDir = Directory(p.join(parentDir.path, 'test_package'))
+            ..createSync();
+
+          await addToParentDependencies(logger, packageDir);
+
+          final content = parentPubspec.readAsStringSync();
+          expect(content, contains('test_package:'));
+          expect(content, contains('path: test_package'));
+
+          final existingIndex = content.indexOf('existing_package:');
+          final insertedIndex = content.indexOf('test_package:');
+          final flutterIndex = content.indexOf('flutter:');
+
+          expect(existingIndex, greaterThanOrEqualTo(0));
+          expect(insertedIndex, greaterThan(existingIndex));
+          expect(flutterIndex, greaterThan(insertedIndex));
+        },
+      );
     });
 
     group('addToParentDIConfiguration', () {
